@@ -19,6 +19,7 @@ jobs:
           host: ${{ secrets.EC2_HOST_CHALKBOARD }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 20m
           script: |
             # Install git if not present
             if ! command -v git &> /dev/null; then
