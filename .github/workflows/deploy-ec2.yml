@@ -1,0 +1,92 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST_CHALKBOARD }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Install Node.js if not present
+            if ! command -v node &> /dev/null; then
+              curl -sL https://rpm.nodesource.com/setup_18.x | sudo bash -
+              sudo yum install -y nodejs
+            fi
+
+            # Install Yarn if not present
+            if ! command -v yarn &> /dev/null; then
+              sudo npm install -g yarn
+            fi
+
+            # Install PM2 globally if not present
+            if ! command -v pm2 &> /dev/null; then
+              sudo npm install -g pm2
+            fi
+
+            # Install and configure nginx if not present
+            if ! command -v nginx &> /dev/null; then
+              sudo yum install -y nginx
+              sudo systemctl enable nginx
+            fi
+
+            # Configure nginx for React + Socket.io
+            if [ ! -f /etc/nginx/conf.d/chalkboard.conf ]; then
+              sudo tee /etc/nginx/conf.d/chalkboard.conf > /dev/null <<'EOF'
+            server {
+                listen 80;
+                server_name _;
+
+                root /var/www/chalkboard/client/build;
+                index index.html;
+
+                # Serve React app
+                location / {
+                    try_files $uri $uri/ /index.html;
+                }
+
+                # Proxy Socket.io connections
+                location /socket.io/ {
+                    proxy_pass http://127.0.0.1:8080;
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade $http_upgrade;
+                    proxy_set_header Connection "upgrade";
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $scheme;
+                }
+            }
+            EOF
+              sudo systemctl restart nginx
+            fi
+
+            # Create directory and clone repo if not present
+            if [ ! -d /var/www/chalkboard ]; then
+              sudo mkdir -p /var/www
+              cd /var/www
+              sudo git clone https://github.com/N73311/chalkboard.git
+              sudo chown -R ec2-user:ec2-user /var/www/chalkboard
+            fi
+
+            cd /var/www/chalkboard
+            git pull origin master
+            yarn install
+            yarn workspace client build
+            yarn workspace server install
+            pm2 restart chalkboard-server || pm2 start server/index.js --name chalkboard-server
+            pm2 save
+            sudo pm2 startup systemd -u ec2-user --hp /home/ec2-user
+            sudo systemctl reload nginx
