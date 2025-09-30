@@ -20,6 +20,11 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            # Install git if not present
+            if ! command -v git &> /dev/null; then
+              sudo yum install -y git
+            fi
+
             # Install Node.js if not present
             if ! command -v node &> /dev/null; then
               curl -sL https://rpm.nodesource.com/setup_18.x | sudo bash -
