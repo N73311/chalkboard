@@ -53,7 +53,7 @@ jobs:
               sudo tee /etc/nginx/conf.d/chalkboard.conf > /dev/null <<'EOF'
             server {
                 listen 80;
-                server_name _;
+                server_name chalkboard.zachayers.io;
 
                 root /var/www/chalkboard/client/build;
                 index index.html;
@@ -61,6 +61,9 @@ jobs:
                 # Serve React app
                 location / {
                     try_files $uri $uri/ /index.html;
+                    add_header X-Frame-Options "SAMEORIGIN" always;
+                    add_header X-Content-Type-Options "nosniff" always;
+                    add_header X-XSS-Protection "1; mode=block" always;
                 }
 
                 # Proxy Socket.io connections
@@ -73,7 +76,15 @@ jobs:
                     proxy_set_header X-Real-IP $remote_addr;
                     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                     proxy_set_header X-Forwarded-Proto $scheme;
+                    proxy_set_header X-Forwarded-Host $host;
                 }
+            }
+
+            # Redirect IP access to domain
+            server {
+                listen 80 default_server;
+                server_name _;
+                return 301 https://chalkboard.zachayers.io$request_uri;
             }
             EOF
               sudo systemctl restart nginx
@@ -103,8 +114,8 @@ jobs:
             pm2 stop chalkboard-server 2>/dev/null || true
             pm2 delete chalkboard-server 2>/dev/null || true
 
-            # Start the server with PM2
-            cd server && pm2 start index.js --name chalkboard-server --cwd /var/www/chalkboard/server
+            # Start the server with PM2 with production environment
+            cd server && NODE_ENV=production pm2 start index.js --name chalkboard-server --cwd /var/www/chalkboard/server --env production
             pm2 save
 
             # Setup PM2 to start on boot (only needs to run once, but safe to repeat)

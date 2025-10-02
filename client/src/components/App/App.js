@@ -17,7 +17,7 @@ function App() {
       />
     );
   } else {
-    const socket = openSocket(`https://frozen-woodland-67352.herokuapp.com/`, {
+    const socket = openSocket(window.location.origin, {
       query: `username=${username}`,
     });
 
