@@ -4,7 +4,6 @@ import "./Chalkboard.styles.scss";
 import Header from "../Header/Header";
 import ToolPalette from "../ToolPalette/ToolPalette";
 import UserPalette from "../UserPalette/UserPalette";
-import axios from "axios";
 
 const Chalkboard = ({ socket }) => {
   const [color, setColor] = useState("#fff");
@@ -12,16 +11,30 @@ const Chalkboard = ({ socket }) => {
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
-    axios.get("/users").then((response) => {
-      setUsers(response.data);
-    });
-  }, []);
+    // Set up socket listener for initial user list
+    const handleUserList = (userList) => {
+      setUsers(userList);
+    };
 
-  socket.on("new-user", (data) => {
-    if (users.indexOf(data) === -1) {
-      setUsers([...users, data]);
-    }
-  });
+    // Set up socket listener for new users
+    const handleNewUser = (data) => {
+      setUsers(prevUsers => {
+        if (prevUsers.indexOf(data) === -1) {
+          return [...prevUsers, data];
+        }
+        return prevUsers;
+      });
+    };
+
+    socket.on("user-list", handleUserList);
+    socket.on("new-user", handleNewUser);
+
+    // Cleanup socket listeners on unmount
+    return () => {
+      socket.off("user-list", handleUserList);
+      socket.off("new-user", handleNewUser);
+    };
+  }, [socket]);
 
   const setup = (p5, parent) => {
     const [width, height] = getCanvasSize();
@@ -79,8 +92,8 @@ const Chalkboard = ({ socket }) => {
         p5.rect(p5.mouseX - 25, p5.mouseY - 25, 50, 50);
         socket.emit("square", {
           color,
-          x: p5.mouseX - 25,
-          y: p5.mouseY - 25,
+          x: p5.mouseX,
+          y: p5.mouseY,
         });
         break;
       default:

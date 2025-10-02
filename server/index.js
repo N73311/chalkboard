@@ -30,12 +30,23 @@ const server = app.listen(PORT, () => {
   console.log(`App running on port ${PORT}...`);
 });
 
-// Setup Socket IO Connection
-const io = socket(server);
+// Setup Socket IO Connection with CORS
+const io = socket(server, {
+  cors: {
+    origin: ["http://localhost:3000", "http://localhost:3001", "https://chalkboard.zachayers.io"],
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
 
 io.sockets.on("connection", (socket) => {
   const newUser = socket.handshake.query["username"];
   userCache.push(newUser);
+
+  // Send the current user list including the new user to the connecting client
+  socket.emit("user-list", userCache);
+
+  // Notify all other users about the new user
   socket.broadcast.emit("new-user", newUser);
 
   // Watch for incoming socket connection mouse events

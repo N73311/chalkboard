@@ -2,6 +2,9 @@ import React from "react";
 import "./ToolPalette.styles.scss";
 import { CirclePicker } from "react-color";
 import { Button, Tooltip } from "@material-ui/core";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCircle, faSquare, faPaintBrush, faEraser } from "@fortawesome/free-solid-svg-icons";
+
 const ToolPalette = ({ handleColorChange, handleToolClick, activeTool }) => {
   return (
     <div className="tool-palette">
@@ -17,7 +20,7 @@ const ToolPalette = ({ handleColorChange, handleToolClick, activeTool }) => {
               color={activeTool === "CIRCLE" ? "secondary" : "primary"}
               onClick={() => handleToolClick("CIRCLE")}
             >
-              <i className="fas fa-circle"></i>
+              <FontAwesomeIcon icon={faCircle} />
             </Button>
           </Tooltip>
           <Tooltip title="Square">
@@ -27,7 +30,7 @@ const ToolPalette = ({ handleColorChange, handleToolClick, activeTool }) => {
               color={activeTool === "SQUARE" ? "secondary" : "primary"}
               onClick={() => handleToolClick("SQUARE")}
             >
-              <i className="fas fa-square"></i>
+              <FontAwesomeIcon icon={faSquare} />
             </Button>
           </Tooltip>
         </div>
@@ -41,7 +44,7 @@ const ToolPalette = ({ handleColorChange, handleToolClick, activeTool }) => {
                 handleToolClick("BRUSH");
               }}
             >
-              <i className="fas fa-paint-brush" />
+              <FontAwesomeIcon icon={faPaintBrush} />
             </Button>
           </Tooltip>
           <Tooltip title="Erase">
@@ -51,7 +54,7 @@ const ToolPalette = ({ handleColorChange, handleToolClick, activeTool }) => {
               color={activeTool === "ERASE" ? "secondary" : "primary"}
               onClick={() => handleToolClick("ERASE")}
             >
-              <i className="fas fa-eraser"></i>
+              <FontAwesomeIcon icon={faEraser} />
             </Button>
           </Tooltip>
         </div>

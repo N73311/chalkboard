@@ -101,11 +101,12 @@ jobs:
             cd /var/www/chalkboard
             git pull origin master
 
-            # Install dependencies for both workspaces
+            # Clean install dependencies for both workspaces
+            rm -rf node_modules client/node_modules server/node_modules
             yarn install
 
-            # Build the client
-            cd client && yarn build && cd ..
+            # Install and build the client
+            cd client && yarn install && yarn build && cd ..
 
             # Ensure server has all dependencies
             cd server && yarn install && cd ..

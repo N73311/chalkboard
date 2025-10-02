@@ -17,6 +17,7 @@ function App() {
       />
     );
   } else {
+    // Always use the same origin since the server serves both the app and socket.io
     const socket = openSocket(window.location.origin, {
       query: `username=${username}`,
     });
