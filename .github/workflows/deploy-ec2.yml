@@ -26,9 +26,10 @@ jobs:
               sudo yum install -y git
             fi
 
-            # Install Node.js if not present
-            if ! command -v node &> /dev/null; then
-              curl -sL https://rpm.nodesource.com/setup_18.x | sudo bash -
+            # Install Node.js 22 if not present or wrong version
+            NODE_VERSION=$(node -v 2>/dev/null | grep -oP '\d+' | head -1)
+            if [ "$NODE_VERSION" != "22" ]; then
+              curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash -
               sudo yum install -y nodejs
             fi
 
@@ -68,7 +69,7 @@ jobs:
 
                 # Proxy Socket.io connections
                 location /socket.io/ {
-                    proxy_pass http://127.0.0.1:8080;
+                    proxy_pass http://127.0.0.1:3000;
                     proxy_http_version 1.1;
                     proxy_set_header Upgrade $http_upgrade;
                     proxy_set_header Connection "upgrade";
@@ -102,14 +103,16 @@ jobs:
             git pull origin master
 
             # Clean install dependencies for both workspaces
-            rm -rf node_modules client/node_modules server/node_modules
-            yarn install
+            rm -rf node_modules client/node_modules server/node_modules yarn.lock package-lock.json
 
-            # Install and build the client
-            cd client && yarn install && yarn build && cd ..
+            # Install workspace dependencies
+            yarn install --ignore-engines || npm install
 
-            # Ensure server has all dependencies
-            cd server && yarn install && cd ..
+            # Build the client
+            yarn workspace client build || (cd client && npm run build && cd ..)
+
+            # Ensure server dependencies are installed
+            yarn workspace server install || (cd server && npm install && cd ..)
 
             # Stop existing PM2 process if running
             pm2 stop chalkboard-server 2>/dev/null || true
