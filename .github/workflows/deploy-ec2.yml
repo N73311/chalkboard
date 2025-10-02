@@ -89,10 +89,26 @@ jobs:
 
             cd /var/www/chalkboard
             git pull origin master
+
+            # Install dependencies for both workspaces
             yarn install
-            yarn workspace client build
-            yarn workspace server install
-            pm2 restart chalkboard-server || pm2 start server/index.js --name chalkboard-server
+
+            # Build the client
+            cd client && yarn build && cd ..
+
+            # Ensure server has all dependencies
+            cd server && yarn install && cd ..
+
+            # Stop existing PM2 process if running
+            pm2 stop chalkboard-server 2>/dev/null || true
+            pm2 delete chalkboard-server 2>/dev/null || true
+
+            # Start the server with PM2
+            cd server && pm2 start index.js --name chalkboard-server --cwd /var/www/chalkboard/server
             pm2 save
-            sudo pm2 startup systemd -u ec2-user --hp /home/ec2-user
-            sudo systemctl reload nginx
+
+            # Setup PM2 to start on boot (only needs to run once, but safe to repeat)
+            sudo env PATH=$PATH:/usr/bin pm2 startup systemd -u ec2-user --hp /home/ec2-user
+
+            # Restart nginx to ensure it's running
+            sudo systemctl restart nginx
